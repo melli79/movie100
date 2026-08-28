@@ -1,0 +1,5 @@
+package de.gruetzmann.movie100
+
+import androidx.compose.ui.window.ComposeUIViewController
+
+fun MainViewController() = ComposeUIViewController { App() }
