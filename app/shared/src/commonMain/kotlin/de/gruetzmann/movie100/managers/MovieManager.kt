@@ -20,9 +20,11 @@ object MovieManager {
         return usersMovies
     }
 
-    fun addMovie(login :String, movie :Movie) {
+    fun addMovie(login :String, movie :Movie) :Boolean {
         if (movie !in usersMovies) {
             usersMovies.add(movie)
+            return true
         }
+        return false
     }
 }
