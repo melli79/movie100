@@ -9,7 +9,8 @@ data class Movie(
     val actors :List<String>,
     var inceptionYear :Int = 2010,
     val director :String? =null,
-    val poster :ImageBitmap? =null,
+    val posterUrl :String? =null,
+    var poster :ImageBitmap? =null,
     val details :String? =null,
 ) {
     override fun toString() = "$name $inceptionYear ${if (director!=null) "by $director" else ""} with $actors"
