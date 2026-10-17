@@ -14,10 +14,12 @@ junit = "4.13.2"
 kotlin = "2.4.21"
 kotlin-wrappers = "2026.10.0"
 kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"
 logback = "1.6.5"
 material3 = "1.9.0"
 ulid = "1.6.0"
+movieApi = "3.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -41,11 +43,16 @@ kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-s
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 ktor-serverCore = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-serverNetty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
+ktor-serverContentNeg = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref= "ktor" }
 ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-contentNeg = { module= "io.ktor:ktor-client-content-negotiation", version.ref= "ktor" }
 ulid = { module = "com.aallam.ulid:ulid-kotlin", version.ref= "ulid" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 wrappers-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlin-wrappers" }
+movie-api = { module = "uk.co.conoregan:themoviedbapi", version.ref = "movieApi" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

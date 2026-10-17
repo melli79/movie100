@@ -74,10 +74,10 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                                         change.consume()
                                         dragOffsetY += dragAmount.y
                                         if (dragOffsetY > threshold && index < movies.size - 1) {
-                                            movieManager.reorderMovies(login, index, index + 1)
+                                            movieManager.moveMovieDown(login, index)
                                             dragOffsetY = 0f
                                         } else if (dragOffsetY < -threshold && index > 0) {
-                                            movieManager.reorderMovies(login, index, index - 1)
+                                            movieManager.moveMovieUp(login, index)
                                             dragOffsetY = 0f
                                         }
                                     }
@@ -95,12 +95,12 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                 }
                 val poster = movie.poster
                 if (poster != null)
-                    Image(poster, movie.name, modifier = Modifier.width(80.dp).height(120.dp).padding(end = 8.dp))
+                    Image(poster, movie.title, modifier = Modifier.width(80.dp).height(120.dp).padding(end = 8.dp))
 
                 Column(modifier= Modifier.weight(1f)) {
                     Row(modifier= Modifier.fillMaxWidth()) {
                         Text(
-                            "${movie.name} *${movie.inceptionYear}",
+                            "${movie.title} *${movie.inceptionYear}",
                             fontSize= MaterialTheme.typography.titleLarge.fontSize,
                             modifier = Modifier.weight(1f)
                         )

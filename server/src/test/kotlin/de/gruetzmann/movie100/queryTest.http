@@ -1,0 +1,7 @@
+### Test search endpoint
+GET http://localhost:8080/search?q=My+neighbor+Totoro
+Accept: application/json
+
+### Test credits endpoint
+GET http://localhost:8080/credits/8392
+Accept: application/json

@@ -1,22 +1,26 @@
 package de.gruetzmann.movie100.model
 
+import kotlinx.serialization.Serializable
 import ulid.ULID
 import kotlin.time.Clock.System.now
 import kotlin.time.Instant
 
+@Serializable
 data class MovieDto(
-    val id :ULID,
-    var name :String,
+    val id :Int,
+    var title :String,
     var poster :Url? =null,
     val actors :MutableList<ActorDto> =mutableListOf(),
     var director :String? =null,
-    var releaseDate :Instant =Instant.DISTANT_PAST,
+    @Serializable(with = InstantSerializer::class)
+    var releaseDate :Instant? =null,
     var description :String? =null,
 ) {
 }
 
+@Serializable
 data class ActorDto(
-    val id :ULID,
+    val id :Int,
     var name :String,
     var gender :Gender,
     var birthyear :Int? =null,
