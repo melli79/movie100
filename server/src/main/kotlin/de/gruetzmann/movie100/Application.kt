@@ -15,9 +15,12 @@ import uk.co.conoregan.themoviedbapi.TmdbApi
 import uk.co.conoregan.themoviedbapi.model.core.Movie
 import de.gruetzmann.movie100.model.MovieDto
 import de.gruetzmann.movie100.model.Url
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.cors.routing.CORS
 import kotlinx.serialization.json.Json
 import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
@@ -37,8 +40,8 @@ fun main(args :Array<String>) {
         .start(wait = true)
 }
 
-private fun queryMovie(tmbdClient :TmdbApi, titleQuery :String) :List<MovieDto> {
-    val movies = tmbdClient.search.searchMulti(titleQuery, true, "en", 0)
+private fun queryMovie(tmdbClient :TmdbApi, titleQuery :String) :List<MovieDto> {
+    val movies = tmdbClient.search.searchMulti(titleQuery, true, "en", 0)
     println("Found movies: " + movies.results)
     val results = mutableListOf<MovieDto>()
     for (item in movies.results) {
@@ -52,38 +55,50 @@ private fun queryMovie(tmbdClient :TmdbApi, titleQuery :String) :List<MovieDto> 
 }
 
 fun Application.module() {
+    install(CORS) {
+        allowHost("tmdb.org", subDomains= listOf("image", "www"))
+        allowHost("localhost:8080")
+        allowHost("localhost:8081")
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+    }
     install(ContentNegotiation) {
         json(Json {
             prettyPrint = true
             ignoreUnknownKeys = true
         })
     }
-    var tmbdClient :TmdbApi? =null
+    var tmdbClient :TmdbApi? =null
     if (apiKey!=null) {
-        tmbdClient = TmdbApi(apiKey)
+        tmdbClient = TmdbApi(apiKey)
     }
 
     routing {
         get("/search") {
-            if (tmbdClient!=null) {
+            if (tmdbClient!=null) {
                 val query = call.request.queryParameters["q"]
                 if (query.isNullOrBlank())
                     call.respond(HttpStatusCode.BadRequest, ErrorDto("Missing query parameter"))
                 else {
-                    val candidates = queryMovie(tmbdClient, query)
+                    val candidates = queryMovie(tmdbClient, query)
                     call.respond(HttpStatusCode.OK, candidates)
                 }
             } else
                 call.respond(HttpStatusCode.FailedDependency, ErrorDto("API key not set!"))
         }
         get("/credits/{id}") {
-            if (tmbdClient!=null) {
+            if (tmdbClient!=null) {
                 val idStr = call.parameters["id"]
                 val id = idStr?.toIntOrNull()
                 if (id == null) {
                     call.respond(HttpStatusCode.BadRequest, ErrorDto("Invalid or missing movie id"))
                 } else {
-                    val credits = tmbdClient.movies.getCredits(id, "en")
+                    val credits = tmdbClient.movies.getCredits(id, "en")
                     call.respond(HttpStatusCode.OK, MovieDto(id, "", null,
                         credits.cast.map(::toDto).toMutableList(), getDirector(credits.crew)))
                 }

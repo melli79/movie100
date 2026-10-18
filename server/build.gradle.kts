@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
     implementation(libs.ktor.serverContentNeg)
+    implementation(libs.ktor.serverCors)
     implementation(libs.ktor.json)
     implementation(libs.ulid)
     implementation(libs.movie.api)

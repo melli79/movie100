@@ -14,7 +14,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.http.ContentType
@@ -29,7 +28,7 @@ expect val serverUrl :String
 object MovieManager {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val mainScope = CoroutineScope(Dispatchers.Main)
-    private val http = HttpClient(CIO) {
+    private val http = HttpClient {
         install(ContentNegotiation) {
             json()
         }

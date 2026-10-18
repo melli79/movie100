@@ -2,7 +2,6 @@ package de.gruetzmann.movie100.viewmodel
 
 import androidx.compose.ui.graphics.ImageBitmap
 import de.gruetzmann.movie100.model.Url
-import ulid.ULID
 
 data class Movie(
     val id :Int,
