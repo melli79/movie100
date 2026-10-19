@@ -111,7 +111,7 @@ fun Application.module() {
 fun toDto(cast :Cast) :ActorDto = ActorDto(cast.id, cast.name, toGender(cast.gender))
 
 internal fun getDirector(crew :List<Crew>) :String? {
-    for (member in crew) if (member.job.contains("director", true))
+    for (member in crew) if (member.department.contains("directing", true) && member.job.contains("director", true) && !member.job.contains("assistant", true))
         return member.name
     return null
 }

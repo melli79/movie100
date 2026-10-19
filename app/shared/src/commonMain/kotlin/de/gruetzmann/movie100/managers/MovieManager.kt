@@ -20,6 +20,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import kotlin.time.Instant
 
@@ -30,7 +31,10 @@ object MovieManager {
     private val mainScope = CoroutineScope(Dispatchers.Main)
     private val http = HttpClient {
         install(ContentNegotiation) {
-            json()
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
         }
     }
     private var knownMovies = mutableListOf(
@@ -85,33 +89,41 @@ object MovieManager {
     }
 
     fun addMovie(movie :Movie) :Boolean {
-        if (movie !in usersMovies) {
+        if (usersMovies.none { it.id == movie.id }) {
             usersMovies.add(movie)
             notifySubscribers()
-            if (movie.poster==null) coroutineScope.launch {
-                val index = usersMovies.indexOf(movie)
-                if (movie.poster==null && index>=0) {
-                    val posterUrl = movie.posterUrl
-                    if (posterUrl != null) launch {
-                        val bitmap = loadImage(posterUrl.location)
-                        if (bitmap != null) {
-                            val updated = usersMovies[index].copy(poster = bitmap)
-                            usersMovies[index] = updated
+
+            if (movie.poster == null && movie.posterUrl != null) coroutineScope.launch {
+                try {
+                    val bitmap = loadImage(movie.posterUrl.location)
+                    if (bitmap != null) {
+                        val index = usersMovies.indexOfFirst { it.id == movie.id }
+                        if (index >= 0) {
+                            usersMovies[index] = usersMovies[index].copy(poster = bitmap)
                             notifySubscribers()
                         }
                     }
+                } catch (e: Throwable) {
+                    println("Error loading poster image: ${e.message}")
                 }
-                if (movie.actors.isEmpty()) coroutineScope.launch {
+            }
+
+            if (movie.actors.isEmpty()) coroutineScope.launch {
+                try {
                     val crew = http.get("$serverUrl/credits/${movie.id}")
-                    if (crew.status== HttpStatusCode.OK) {
+                    if (crew.status == HttpStatusCode.OK) {
                         val body = crew.body<MovieDto>()
                         val actors = body.actors.take(3).map { it.toString() }
-                        val index = usersMovies.indexOf(movie)
-                        if (index != -1) {
+                        val index = usersMovies.indexOfFirst { it.id == movie.id }
+                        if (index >= 0) {
                             usersMovies[index] = usersMovies[index].copy(actors= actors, director= body.director)
                             notifySubscribers()
                         }
+                    } else {
+                        println("Credits error ${crew.status}: ${crew.body<ErrorDto>().message}")
                     }
+                } catch (e: Throwable) {
+                    println("Error fetching credits for movie ${movie.id}: ${e.message}")
                 }
             }
             return true
