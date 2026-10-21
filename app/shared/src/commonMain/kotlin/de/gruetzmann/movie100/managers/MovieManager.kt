@@ -1,11 +1,11 @@
 package de.gruetzmann.movie100.managers
 
+import androidx.collection.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
-import de.gruetzmann.movie100.model.ActorDto
 import de.gruetzmann.movie100.model.ErrorDto
-import de.gruetzmann.movie100.model.Gender
 import de.gruetzmann.movie100.model.MovieDto
-import de.gruetzmann.movie100.model.Url
+import de.gruetzmann.movie100.model.PreferencesDto
+import de.gruetzmann.movie100.model.inits.knownMovies
 import de.gruetzmann.movie100.model.years
 import de.gruetzmann.movie100.viewmodel.Movie
 import kotlinx.coroutines.CoroutineScope
@@ -15,16 +15,24 @@ import kotlinx.coroutines.launch
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.decodeToImageBitmap
-import kotlin.time.Instant
+import ulid.ULID
+import kotlin.random.Random
+import kotlin.time.Clock
 
 expect val serverUrl :String
+val random = Random(Clock.System.now().epochSeconds)
 
 object MovieManager {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -37,42 +45,30 @@ object MovieManager {
             })
         }
     }
-    private var knownMovies = mutableListOf(
-        MovieDto(1, "Star Trek IX First Contact",
-        Url("https://image.tmdb.org/t/p/w300/iqhHe893Vcf07jNkNQ31tu85dKG.jpg"),
-        mutableListOf(ActorDto(1,"Patrick Steward", Gender.MALE),
-            ActorDto(2,"Brent Spiner", Gender.MALE),
-            ActorDto(3,"Jonathan Frakes", Gender.MALE),
-            ActorDto(4,"LeVar Burton", Gender.MALE)),
-        "J. Frakes", Instant.parse("1996-11-02T00:00:00Z")),
-        MovieDto(2, "The Lord of the Rings I The Fellowship",
-        Url("https://image.tmdb.org/t/p/w300/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg"),
-        mutableListOf(ActorDto(5,"Elijah Wood", Gender.MALE),
-            ActorDto(6,"Ian McKellen", Gender.MALE),
-            ActorDto(7,"Orlando Bloom", Gender.MALE)),
-            "", Instant.parse("2001-12-01T00:00:00Z")),
-        MovieDto(3, "The Godfather",
-        Url("https://image.tmdb.org/t/p/w300/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"),
-        mutableListOf(ActorDto(8,"Marlon Brando", Gender.MALE),
-            ActorDto(9,"Al Pacino", Gender.MALE)),
-            "F.F. Coppola", Instant.parse("1972-10-01T00:00:00Z")),
-        MovieDto(4, "The Green Butcher",
-        Url("https://image.tmdb.org/t/p/w300/w9hCJ0JKftF8nX9Z2gNbVOtCFh1.jpg"),
-        mutableListOf(ActorDto(10,"Christian Bale", Gender.MALE),
-            ActorDto(11,"Nikolaj Lie Kaas", Gender.MALE),
-            ActorDto(12,"Mads Mikkelsen", Gender.MALE),
-            ActorDto(13,"Line Kruse", Gender.FEMALE)),
-                    "A.Th. Jenssen", Instant.parse("2003-10-01T00:00:00Z")),
-        MovieDto(5, "The Dark Knight",
-        Url("https://image.tmdb.org/t/p/w300/qJ2tW6WMUDux911r6m7haRef0WH.jpg"),
-        mutableListOf(ActorDto(14,"Christian Bale", Gender.MALE),
-            ActorDto(15,"Heath Ledger", Gender.MALE),
-            ActorDto(16,"Aaron Eckhart", Gender.MALE)),
-            "Christopher Nolan", Instant.parse("2008-10-01T00:00:00Z")),
-    )
-    private var movies = mutableListOf<Movie>()
-    private var usersMovies = mutableListOf<Movie>()
+    private val ulidFactory = ULID.Factory(random= random)
+    private var movies = LruCache<Int, MovieDto>(100)
+    private lateinit var login :String
+    private lateinit var userId :ULID
+    private var usersMovies = mutableListOf<MovieDto>()
+    private var url2poster = LruCache<String, ImageBitmap>(200)
     private var subscribers = mutableListOf<(List<Movie>) -> Unit>()
+
+    suspend fun login(login :String, password :String) :Boolean {
+        if (login.isBlank() || password.isBlank())
+            return false
+        val preferences = http.post {
+            url(serverUrl+"/login/$login")
+        }.body<PreferencesDto?>() ?: PreferencesDto(ulidFactory.nextULID(), knownMovies.toMutableList())
+        usersMovies.clear()
+        preferences.movies.forEach { movie ->
+            this.movies.put(movie.id, movie)
+            addMovie(toMovie(movie), false)
+        }
+        this.login = login
+        this.userId = preferences.userId
+        notifySubscribers()
+        return true
+    }
 
     suspend fun findByNameLike(pattern :String) :List<Movie> {
         val response = http.get("$serverUrl/search") {
@@ -85,23 +81,41 @@ object MovieManager {
             println("Server error ${response.status}: ${response.body<ErrorDto>().message}")
             return emptyList()
         }
-        return response.body<List<MovieDto>>().map(this::toMovie)
+        val movies = response.body<List<MovieDto>>()
+        movies.forEach { movie ->
+            this.movies.put(movie.id, movie)
+        }
+        return movies.map(this::toMovie)
     }
 
-    fun addMovie(movie :Movie) :Boolean {
+    fun addMovie(movie :Movie, notify :Boolean =true) :Boolean {
         if (usersMovies.none { it.id == movie.id }) {
-            usersMovies.add(movie)
-            notifySubscribers()
+            var candidate = movies.get(movie.id)
+            if (candidate!=null) {
+                usersMovies.add(candidate)
+                if (notify) {
+                    notifySubscribers()
+                    savePreferences()
+                }
+            } else coroutineScope.launch {
+                val candidates = http.get {
+                    url(serverUrl+"/search?q=${movie.title}")
+                }.body<List<MovieDto>>()
+                candidate = candidates.firstOrNull { it.id==movie.id } ?: return@launch
+                movies.put(candidate.id, candidate)
+                usersMovies.add(candidate)
+                if (notify) {
+                    notifySubscribers()
+                    savePreferences()
+                }
+            }
 
-            if (movie.poster == null && movie.posterUrl != null) coroutineScope.launch {
+            if (movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
                 try {
                     val bitmap = loadImage(movie.posterUrl.location)
                     if (bitmap != null) {
-                        val index = usersMovies.indexOfFirst { it.id == movie.id }
-                        if (index >= 0) {
-                            usersMovies[index] = usersMovies[index].copy(poster = bitmap)
-                            notifySubscribers()
-                        }
+                        url2poster.put(movie.posterUrl.location, bitmap)
+                        notifySubscribers()
                     }
                 } catch (e: Throwable) {
                     println("Error loading poster image: ${e.message}")
@@ -113,10 +127,10 @@ object MovieManager {
                     val crew = http.get("$serverUrl/credits/${movie.id}")
                     if (crew.status == HttpStatusCode.OK) {
                         val body = crew.body<MovieDto>()
-                        val actors = body.actors.take(3).map { it.toString() }
+                        val actors = body.actors.take(3)
                         val index = usersMovies.indexOfFirst { it.id == movie.id }
                         if (index >= 0) {
-                            usersMovies[index] = usersMovies[index].copy(actors= actors, director= body.director)
+                            usersMovies[index] = usersMovies[index].copy(actors= actors.toMutableList(), director= body.director)
                             notifySubscribers()
                         }
                     } else {
@@ -131,31 +145,33 @@ object MovieManager {
         return false
     }
 
+    fun savePreferences() = coroutineScope.launch {
+        http.put("$serverUrl/preferences/$userId") {
+            contentType(ContentType.Application.Json)
+            setBody(PreferencesDto(userId, usersMovies.toMutableList()))
+        }
+    }
+
     fun subscribeUsersMovies(login :String, subscriber :(List<Movie>) -> Unit) {
         subscribers.add(subscriber)
-        if (usersMovies.isEmpty())
-             loadKnownMovies()
-        else
-            subscriber(usersMovies.toList())
+        if (usersMovies.isNotEmpty())
+            subscriber(usersMovies.map(this::toMovie))
     }
 
     private fun loadKnownMovies() {
-        movies = knownMovies.map(this::toMovie).toMutableList()
-        usersMovies = movies.take(3).toMutableList()
+        knownMovies.forEach { movie ->
+            movies.put(movie.id, movie)
+            usersMovies.add(movie)
+        }
         notifySubscribers()
         coroutineScope.launch {
-            movies.forEachIndexed { index, movie ->
-                val posterUrl = movie.posterUrl
+            usersMovies.forEachIndexed { index, movie ->
+                val posterUrl = movie.poster
                 if (posterUrl!=null) launch {
                     val bitmap = loadImage(posterUrl.location)
                     if (bitmap != null) {
-                        val updated = movie.copy(poster = bitmap)
-                        movies[index] = updated
-                        val userIdx = usersMovies.indexOfFirst { it.id == movie.id }
-                        if (userIdx != -1) {
-                            usersMovies[userIdx] = updated
-                            notifySubscribers()
-                        }
+                        url2poster.put(posterUrl.location, bitmap)
+                        notifySubscribers()
                     }
                 }
             }
@@ -169,6 +185,7 @@ object MovieManager {
         inceptionYear = dto.releaseDate?.years(),
         director = dto.director,
         posterUrl = dto.poster,
+        poster= if (dto.poster!=null) url2poster.get(dto.poster!!.location)  else null,
         details = dto.description
     )
 
@@ -182,36 +199,59 @@ object MovieManager {
         }
     }
 
-    fun reorderMovies(login :String, fromIndex :Int, toIndex :Int) {
+    fun reorderMovies(fromIndex :Int, toIndex :Int) {
         if (fromIndex in usersMovies.indices && toIndex in usersMovies.indices && fromIndex != toIndex) {
             val item = usersMovies.removeAt(fromIndex)
             usersMovies.add(toIndex, item)
+            coroutineScope.launch {
+                http.put("$serverUrl/preferences/$login") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PreferencesDto(userId, usersMovies.toMutableList()))
+                }
+            }
             notifySubscribers()
+            savePreferences()
         }
     }
 
     private fun notifySubscribers() {
         mainScope.launch {
-            val currentList = usersMovies.toList()
+            val currentList = usersMovies.map(::toMovie)
             for (subscriber in subscribers)
                 subscriber(currentList)
         }
     }
 
-    fun moveMovieUp(login :String, index :Int) {
+    fun moveMovieUp(index :Int) {
         if (index > 0 && index < usersMovies.size) {
-            reorderMovies(login, index, index - 1)
+            reorderMovies(index, index - 1)
         }
     }
 
-    fun moveMovieDown(login :String, index :Int) {
+    fun moveMovieDown(index :Int) {
         if (index >= 0 && index < usersMovies.size - 1) {
-            reorderMovies(login, index, index + 1)
+            reorderMovies(index, index + 1)
         }
     }
 
-    fun removeUserMovie(login :String, movie :Movie) {
-        if (usersMovies.remove(movie))
-            notifySubscribers()
+    fun removeUserMovie(movie :Movie) {
+        val candidate = usersMovies.firstOrNull { it.id == movie.id } ?: return
+        usersMovies.remove(candidate)
+        coroutineScope.launch {
+            http.put {
+                url("$serverUrl/preferences/$login")
+                contentType(ContentType.Application.Json)
+                setBody(PreferencesDto(userId, usersMovies.toMutableList()))
+            }
+        }
+        notifySubscribers()
+    }
+
+    suspend fun deleteUser() :Boolean {
+        http.delete("$serverUrl/user/$login") {
+            contentType(ContentType.Text.Plain)
+            setBody("DELETE")
+        }
+        return true
     }
 }

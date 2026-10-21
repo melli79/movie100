@@ -3,5 +3,162 @@ GET http://localhost:8080/search?q=My+neighbor+Totoro
 Accept: application/json
 
 ### Test credits endpoint
-GET http://localhost:8080/credits/8392
+GET http://localhost:8080/credits/238
 Accept: application/json
+
+### login
+POST http://localhost:8080/login/melli
+Accept: application/json
+
+### preferences
+PUT http://localhost:8080/preferences/01M5DKVJ077PEWAN4HNV2XXYS9
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userId": "01M5DKVJ077PEWAN4HNV2XXYS9",
+  "movies": [
+    {
+      "id": 1,
+      "title": "Star Trek IX First Contact",
+      "poster": {
+        "location": "https://image.tmdb.org/t/p/w300/iqhHe893Vcf07jNkNQ31tu85dKG.jpg"
+      },
+      "actors": [
+        {
+          "id": 1,
+          "name": "Patrick Steward",
+          "gender": "MALE"
+        },
+        {
+          "id": 2,
+          "name": "Brent Spiner",
+          "gender": "MALE"
+        },
+        {
+          "id": 3,
+          "name": "Jonathan Frakes",
+          "gender": "MALE"
+        },
+        {
+          "id": 4,
+          "name": "LeVar Burton",
+          "gender": "MALE"
+        }
+      ],
+      "director": "J. Frakes",
+      "releaseDate": "1996-11-02T00:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "The Lord of the Rings I The Fellowship",
+      "poster": {
+        "location": "https://image.tmdb.org/t/p/w300/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg"
+      },
+      "actors": [
+        {
+          "id": 5,
+          "name": "Elijah Wood",
+          "gender": "MALE"
+        },
+        {
+          "id": 6,
+          "name": "Ian McKellen",
+          "gender": "MALE"
+        },
+        {
+          "id": 7,
+          "name": "Orlando Bloom",
+          "gender": "MALE"
+        }
+      ],
+      "director": "Peter Jackson",
+      "releaseDate": "2001-12-01T00:00:00Z"
+    },
+    {
+      "id": 4,
+      "title": "The Green Butcher",
+      "poster": {
+        "location": "https://image.tmdb.org/t/p/w300/w9hCJ0JKftF8nX9Z2gNbVOtCFh1.jpg"
+      },
+      "actors": [
+        {
+          "id": 10,
+          "name": "Christian Bale",
+          "gender": "MALE"
+        },
+        {
+          "id": 11,
+          "name": "Nikolaj Lie Kaas",
+          "gender": "MALE"
+        },
+        {
+          "id": 12,
+          "name": "Mads Mikkelsen",
+          "gender": "MALE"
+        },
+        {
+          "id": 13,
+          "name": "Line Kruse",
+          "gender": "FEMALE"
+        }
+      ],
+      "director": "A.Th. Jenssen",
+      "releaseDate": "2003-10-01T00:00:00Z"
+    },
+    {
+      "id": 5,
+      "title": "The Dark Knight",
+      "poster": {
+        "location": "https://image.tmdb.org/t/p/w300/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+      },
+      "actors": [
+        {
+          "id": 14,
+          "name": "Christian Bale",
+          "gender": "MALE"
+        },
+        {
+          "id": 15,
+          "name": "Heath Ledger",
+          "gender": "MALE"
+        },
+        {
+          "id": 16,
+          "name": "Aaron Eckhart",
+          "gender": "MALE"
+        }
+      ],
+      "director": "Christopher Nolan",
+      "releaseDate": "2008-10-01T00:00:00Z"
+    },
+    {
+      "id": 3,
+      "title": "The Godfather",
+      "poster": {
+        "location": "https://image.tmdb.org/t/p/w300/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"
+      },
+      "actors": [
+        {
+          "id": 8,
+          "name": "Marlon Brando",
+          "gender": "MALE"
+        },
+        {
+          "id": 9,
+          "name": "Al Pacino",
+          "gender": "MALE"
+        }
+      ],
+      "director": "F.F. Coppola",
+      "releaseDate": "1972-10-01T00:00:00Z"
+    }
+  ]
+}
+
+### delete
+DELETE http://localhost:8080/user/melli
+Content-Type: text/plain
+Accept: application/json
+
+DELETE

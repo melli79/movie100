@@ -2,6 +2,7 @@ package de.gruetzmann.movie100
 
 import de.gruetzmann.movie100.model.ActorDto
 import de.gruetzmann.movie100.model.ErrorDto
+import de.gruetzmann.movie100.model.PreferencesDto
 import de.gruetzmann.movie100.model.Gender
 import de.gruetzmann.movie100.model.Gender.FEMALE
 import de.gruetzmann.movie100.model.Gender.MALE
@@ -21,6 +22,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.request.receive
 import kotlinx.serialization.json.Json
 import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
@@ -77,6 +79,7 @@ fun Application.module() {
     if (apiKey!=null) {
         tmdbClient = TmdbApi(apiKey)
     }
+    val userService = UserService
 
     routing {
         get("/search") {
@@ -104,6 +107,34 @@ fun Application.module() {
                 }
             } else
                 call.respond(HttpStatusCode.FailedDependency, ErrorDto("API key not set!"))
+        }
+        post("/login/{user}") {
+            val login = call.request.pathVariables["user"] ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorDto("Missing login"))
+            val user = userService.login(login)
+            val preferences = UserService.getPreferences(user)
+            call.respond(HttpStatusCode.Accepted, preferences)
+        }
+
+        put("/preferences/{userId}") {
+            try {
+                val preferences = call.receive<PreferencesDto>()
+                val saved = userService.savePreferences(preferences)
+                call.respond(HttpStatusCode.OK, saved)
+            } catch (e :Exception) {
+                e.printStackTrace()
+                call.respond(HttpStatusCode.BadRequest, ErrorDto("Invalid or missing JSON payload: ${e.message}"))
+            }
+        }
+
+        delete("/user/{user}") {
+            val login = call.request.pathVariables["user"] ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorDto("Missing login"))
+            val confirm = call.receive<String>()
+            if (confirm!="DELETE")
+                return@delete call.respond(HttpStatusCode.BadRequest, ErrorDto("missing confirmation"))
+            if (userService.deleteUser(login))
+                return@delete call.respond(HttpStatusCode.Accepted, "User '$login' deleted.")
+            else
+                return@delete call.respond(HttpStatusCode.NotFound, ErrorDto("User '$login' not found."))
         }
     }
 }

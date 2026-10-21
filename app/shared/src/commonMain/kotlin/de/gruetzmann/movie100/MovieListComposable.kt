@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +35,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.gruetzmann.movie100.managers.MovieManager
 import de.gruetzmann.movie100.viewmodel.Movie
+import kotlinx.coroutines.launch
 
 const val threshold = 200f
 
 @Composable
 fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
     val movieManager = MovieManager
+    val mainScope = rememberCoroutineScope()
     var movies by remember { mutableStateOf(listOf<Movie>()) }
+    val listState = rememberLazyListState()
 
-    LazyColumn(modifier = modifier.padding(10.dp).background(MaterialTheme.colorScheme.background)) {
-        itemsIndexed(movies, key = { _, movie -> movie.id }) { index, movie ->
+    LazyColumn(state= listState, modifier= modifier.padding(10.dp).background(MaterialTheme.colorScheme.background)) {
+        itemsIndexed(movies, key= { _, movie -> movie.id }) { index, movie ->
             var dragOffsetY by remember { mutableFloatStateOf(0f) }
 
             Row(
@@ -56,8 +61,19 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                     verticalArrangement= Arrangement.Center,
                     modifier= Modifier.padding(end = 8.dp)
                 ) {
+                    Text("${index + 1}")
                     IconButton(
-                        onClick= { movieManager.moveMovieUp(login, index) },
+                        onClick= {
+                            movieManager.reorderMovies(index, index-10)
+                            mainScope.launch { listState.animateScrollToItem(index-10) }
+                        },
+                        enabled= index >= 10,
+                        modifier= Modifier.height(28.dp).width(28.dp)
+                    ) {
+                        Text("M", fontSize= 14.sp)
+                    }
+                    IconButton(
+                        onClick= { movieManager.moveMovieUp(index) },
                         enabled= index > 0,
                         modifier= Modifier.height(28.dp).width(28.dp)
                     ) {
@@ -74,10 +90,10 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                                         change.consume()
                                         dragOffsetY += dragAmount.y
                                         if (dragOffsetY > threshold && index < movies.size - 1) {
-                                            movieManager.moveMovieDown(login, index)
+                                            movieManager.moveMovieDown(index)
                                             dragOffsetY = 0f
                                         } else if (dragOffsetY < -threshold && index > 0) {
-                                            movieManager.moveMovieUp(login, index)
+                                            movieManager.moveMovieUp(index)
                                             dragOffsetY = 0f
                                         }
                                     }
@@ -86,11 +102,21 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                             .padding(vertical= 2.dp)
                     )
                     IconButton(
-                        onClick= { movieManager.moveMovieDown(login, index) },
+                        onClick= { movieManager.moveMovieDown(index) },
                         enabled= index < movies.size - 1,
                         modifier= Modifier.height(28.dp).width(28.dp)
                     ) {
                         Text("▼", fontSize= 14.sp)
+                    }
+                    IconButton(
+                        onClick= {
+                            movieManager.reorderMovies(index, index+10)
+                            mainScope.launch { listState.animateScrollToItem(index+10) }
+                        },
+                        enabled= index +10 < movies.size,
+                        modifier= Modifier.height(28.dp).width(28.dp)
+                    ) {
+                        Text("W", fontSize= 14.sp)
                     }
                 }
                 val poster = movie.poster
@@ -104,7 +130,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                             fontSize= MaterialTheme.typography.titleLarge.fontSize,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick= { movieManager.removeUserMovie(login, movie) }, enabled= true,
+                        TextButton(onClick= { movieManager.removeUserMovie(movie) }, enabled= true,
                             colors = ButtonColors(Color.White, Color.Red, Color.Red, Color.Gray),
                             modifier= Modifier.width(32.dp).padding(0.dp)
                         ) {
