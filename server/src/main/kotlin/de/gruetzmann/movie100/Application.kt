@@ -1,5 +1,6 @@
 package de.gruetzmann.movie100
 
+import de.gruetzmann.movie100.db.DatabaseFactory
 import de.gruetzmann.movie100.model.ActorDto
 import de.gruetzmann.movie100.model.ErrorDto
 import de.gruetzmann.movie100.model.PreferencesDto
@@ -26,8 +27,12 @@ import io.ktor.server.request.receive
 import kotlinx.serialization.json.Json
 import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
+import ulid.ULID
+import kotlin.random.Random
 import kotlin.time.Instant
 
+val random = Random(System.currentTimeMillis())
+val ulidFactory = ULID.Factory(random)
 var apiKey :String? =null
 
 fun main(args :Array<String>) {
@@ -38,6 +43,7 @@ fun main(args :Array<String>) {
     }
     if (apiKey==null)
         println("TMDB API Key not set.")
+
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
@@ -57,6 +63,7 @@ private fun queryMovie(tmdbClient :TmdbApi, titleQuery :String) :List<MovieDto> 
 }
 
 fun Application.module() {
+    DatabaseFactory.init()
     install(CORS) {
         allowHost("tmdb.org", subDomains= listOf("image", "www"))
         allowHost("localhost:8080")

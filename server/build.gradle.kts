@@ -20,6 +20,10 @@ dependencies {
     implementation(libs.ktor.json)
     implementation(libs.ulid)
     implementation(libs.movie.api)
+    implementation(libs.jetbrains.exposed)
+    implementation(libs.jetbrains.exposed.jdbc)
+    implementation(libs.jetbrains.exposed.dao)
+    implementation(libs.sqlite.jdbc)
 
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)

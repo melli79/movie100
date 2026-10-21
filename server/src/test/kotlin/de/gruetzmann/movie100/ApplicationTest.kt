@@ -1,7 +1,6 @@
 package de.gruetzmann.movie100
 
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.*
@@ -9,12 +8,11 @@ import kotlin.test.*
 class ApplicationTest {
 
     @Test
-    fun testRoot() = testApplication {
+    fun testSearchWithoutApiKey() = testApplication {
         application {
             module()
         }
-        val response = client.get("/")
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals("Hello, Ktor!", response.bodyAsText())
+        val response = client.get("/search")
+        assertEquals(HttpStatusCode.FailedDependency, response.status)
     }
 }

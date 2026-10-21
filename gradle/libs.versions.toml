@@ -20,6 +20,8 @@ logback = "1.6.5"
 material3 = "1.9.0"
 ulid = "1.6.0"
 movieApi = "3.1.0"
+jetbrains-exposed = "1.6.0"
+sqlite = "3.53.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -55,6 +57,10 @@ ulid = { module = "com.aallam.ulid:ulid-kotlin", version.ref= "ulid" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 wrappers-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlin-wrappers" }
 movie-api = { module = "uk.co.conoregan:themoviedbapi", version.ref = "movieApi" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
+jetbrains-exposed = { module = "org.jetbrains.exposed:exposed-core", version.ref = "jetbrains-exposed" }
+jetbrains-exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "jetbrains-exposed" }
+jetbrains-exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "jetbrains-exposed" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
