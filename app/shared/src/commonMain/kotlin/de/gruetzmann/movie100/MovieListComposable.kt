@@ -113,7 +113,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                         IconButton(
                             onClick= {
                                 movieManager.moveMovieUp(index)
-                                mainScope.launch { listState.animateScrollToItem(maxOf(0, index - 1)) }
+                                mainScope.launch { listState.animateScrollToItem(maxOf(0, index - 2)) }
                             },
                             enabled= !isFiltering && index > 0,
                             modifier= Modifier.height(28.dp).width(28.dp)
@@ -147,7 +147,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                         IconButton(
                             onClick= {
                                 movieManager.moveMovieDown(index)
-                                mainScope.launch { listState.animateScrollToItem(minOf(movies.size - 1, index + 1)) }
+                                mainScope.launch { listState.animateScrollToItem(index) }
                             },
                             enabled= !isFiltering && index < movies.size - 1,
                             modifier= Modifier.height(28.dp).width(28.dp)
@@ -167,7 +167,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                     }
                     val poster = movie.poster
                     if (poster != null)
-                        Image(poster, movie.title, modifier= Modifier.width(100.dp).height(200.dp).padding(end = 8.dp))
+                        Image(poster, movie.title, modifier= Modifier.width(100.dp).height(230.dp).padding(end = 8.dp))
 
                     Column(modifier= Modifier.weight(1f)) {
                         Row(modifier= Modifier.fillMaxWidth()) {

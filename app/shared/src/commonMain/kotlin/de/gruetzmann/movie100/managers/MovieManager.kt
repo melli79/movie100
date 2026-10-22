@@ -50,7 +50,7 @@ object MovieManager {
     private lateinit var login :String
     private lateinit var userId :ULID
     private var usersMovies = mutableListOf<MovieDto>()
-    private var url2poster = LruCache<String, ImageBitmap>(200)
+    private var url2poster = LruCache<String, ImageBitmap>(300)
     private var subscribers = mutableListOf<(List<Movie>) -> Unit>()
 
     suspend fun login(login :String, password :String) :Boolean {
