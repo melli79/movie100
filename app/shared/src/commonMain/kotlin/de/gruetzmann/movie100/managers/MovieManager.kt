@@ -51,6 +51,7 @@ object MovieManager {
     private lateinit var userId :ULID
     private var usersMovies = mutableListOf<MovieDto>()
     private var url2poster = LruCache<String, ImageBitmap>(300)
+    private var loadAll = true
     private var subscribers = mutableListOf<(List<Movie>) -> Unit>()
 
     suspend fun login(login :String, password :String) :Boolean {
@@ -110,15 +111,19 @@ object MovieManager {
                 }
             }
 
-            if (movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
-                try {
-                    val bitmap = loadImage(movie.posterUrl.location)
+            if (loadAll && movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
+                try { // TODO: prefer posters of visible movie descriptions
+                    val bitmap = loadImageNow(movie.posterUrl.location)
                     if (bitmap != null) {
                         url2poster.put(movie.posterUrl.location, bitmap)
                         notifySubscribers()
                     }
                 } catch (e: Throwable) {
                     println("Error loading poster image: ${e.message}")
+                    if (e is OutOfMemoryError) {
+                        url2poster.resize(100)
+                        loadAll = false
+                    }
                 }
             }
 
@@ -168,7 +173,7 @@ object MovieManager {
             usersMovies.forEachIndexed { index, movie ->
                 val posterUrl = movie.poster
                 if (posterUrl!=null) launch {
-                    val bitmap = loadImage(posterUrl.location)
+                    val bitmap = loadImageNow(posterUrl.location)
                     if (bitmap != null) {
                         url2poster.put(posterUrl.location, bitmap)
                         notifySubscribers()
@@ -189,11 +194,26 @@ object MovieManager {
         details = dto.description
     )
 
-    suspend fun loadImage(poster :String) :ImageBitmap? {
+    fun loadImage(movie :Movie) {
+        if (movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
+            try {
+                val bitmap = loadImageNow(movie.posterUrl.location)
+                if (bitmap != null) {
+                    url2poster.put(movie.posterUrl.location, bitmap)
+                    notifySubscribers()
+                }
+            } catch (e :Throwable) {
+                e.printStackTrace()
+                println("Error loading poster image: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun loadImageNow(poster :String) :ImageBitmap? {
         return try {
             val jpg :ByteArray = http.get(poster).body()
             jpg.decodeToImageBitmap()
-        } catch (e :Exception) {
+        } catch (e :Throwable) {
             e.printStackTrace()
             null
         }

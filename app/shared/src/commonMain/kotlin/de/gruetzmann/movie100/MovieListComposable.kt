@@ -2,8 +2,9 @@ package de.gruetzmann.movie100
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,8 +38,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,19 +70,19 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
         }
     }
 
-    Column(modifier = modifier) {
+    Column(modifier= modifier) {
         OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier
+            value= searchQuery,
+            onValueChange= { searchQuery = it },
+            modifier= Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-            placeholder = { Text("Search your movie list...") },
-            singleLine = true,
-            trailingIcon = {
+                .padding(horizontal= 10.dp, vertical= 4.dp),
+            placeholder= { Text("Search your movie list...") },
+            singleLine= true,
+            trailingIcon= {
                 if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
-                        Text("✕", fontSize = 14.sp)
+                    IconButton(onClick= { searchQuery = "" }) {
+                        Text("✕", fontSize= 14.sp)
                     }
                 }
             }
@@ -102,7 +103,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
 
                 Row(modifier= Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical= 4.dp),
                     verticalAlignment= Alignment.CenterVertically
                 ) {
                     Column(horizontalAlignment= Alignment.CenterHorizontally,
@@ -128,10 +129,10 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                             enabled= !isFiltering && index > 0,
                             modifier= Modifier.height(28.dp).width(28.dp)
                         ) {
-                            Text("▲", fontSize = 14.sp)
+                            Text("▲", fontSize= 14.sp)
                         }
-                        Text("≡", fontSize = 18.sp,
-                            modifier = Modifier
+                        Text("≡", fontSize= 18.sp,
+                            modifier= Modifier
                                 .pointerInput(index, movies.size, isFiltering) {
                                     if (!isFiltering) {
                                         detectDragGestures(
@@ -152,7 +153,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                                         )
                                     }
                                 }
-                                .padding(vertical = 2.dp)
+                                .padding(vertical= 2.dp)
                         )
                         IconButton(
                             onClick= {
@@ -162,7 +163,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                             enabled= !isFiltering && index < movies.size - 1,
                             modifier= Modifier.height(28.dp).width(28.dp)
                         ) {
-                            Text("▼", fontSize = 14.sp)
+                            Text("▼", fontSize= 14.sp)
                         }
                         IconButton(
                             onClick= {
@@ -178,21 +179,23 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                     val poster = movie.poster
                     if (poster != null)
                         Image(poster, movie.title, modifier= Modifier.width(100.dp).height(230.dp).padding(end = 8.dp))
+                    else
+                        movieManager.loadImage(movie)
 
                     Column(modifier= Modifier.weight(1f)) {
                         Row(modifier= Modifier.fillMaxWidth()) {
                             Text(
                                 "${movie.title} *${movie.inceptionYear}",
-                                fontSize = MaterialTheme.typography.titleLarge.fontSize,
-                                modifier = Modifier.weight(1f)
+                                fontSize= MaterialTheme.typography.titleLarge.fontSize,
+                                modifier= Modifier.weight(1f)
                             )
-                            TextButton(onClick= { movieManager.removeUserMovie(movie) }, enabled= true,
-                                colors= ButtonColors(Color.White, Color.Red, Color.Red, Color.Gray),
+                            IconButton(onClick= { movieManager.removeUserMovie(movie) }, enabled= true,
                                 modifier= Modifier.width(32.dp).padding(0.dp)
                             ) {
                                 Text("X", fontSize= 16.sp, color= MaterialTheme.colorScheme.error, modifier= Modifier
-                                    .padding(0.dp))
+                                    .padding(0.dp).background(MaterialTheme.colorScheme.errorContainer))
                             }
+                            Spacer(modifier= Modifier.width(24.dp))
                         }
                         if (movie.director != null)
                             Text("director: ${movie.director}")
@@ -220,46 +223,46 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
 @Composable
 fun Modifier.drawScrollbar(
     state: LazyListState,
-    color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha= 0.5f),
     width: Dp = 8.dp,
     hitWidth: Dp = 24.dp
 ): Modifier {
     val coroutineScope = rememberCoroutineScope()
-    var containerHeight by remember { mutableFloatStateOf(1f) }
 
     return this
-        .onGloballyPositioned { layoutCoordinates ->
-            containerHeight = layoutCoordinates.size.height.toFloat()
-        }
         .pointerInput(state) {
             val hitWidthPx = hitWidth.toPx()
-            detectVerticalDragGestures(
-                onDragStart = { offset ->
-                    if (size.width > 0 && size.height > 0 && offset.x >= size.width - hitWidthPx) {
-                        val totalItems = state.layoutInfo.totalItemsCount
-                        if (totalItems > 0 && containerHeight >= 48f) {
-                            val fraction = (offset.y / containerHeight).coerceIn(0f, 1f)
-                            val targetIndex = (fraction * totalItems).toInt().coerceIn(0, totalItems - 1)
-                            coroutineScope.launch {
-                                state.scrollToItem(targetIndex)
-                            }
+            awaitEachGesture {
+                val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                if (size.width > 0 && size.height > 0 && down.position.x >= size.width - hitWidthPx) {
+                    val totalItems = state.layoutInfo.totalItemsCount
+                    if (totalItems > 0) {
+                        down.consume()
+                        val initialFraction = (down.position.y / size.height).coerceIn(0f, 1f)
+                        val initialTargetIndex = (initialFraction * totalItems).toInt().coerceIn(0, totalItems - 1)
+                        coroutineScope.launch {
+                            state.scrollToItem(initialTargetIndex)
                         }
-                    }
-                },
-                onVerticalDrag = { change, _ ->
-                    if (size.width > 0 && size.height > 0 && change.position.x >= size.width - hitWidthPx * 2) {
-                        val totalItems = state.layoutInfo.totalItemsCount
-                        if (totalItems > 0 && containerHeight >= 48f) {
-                            val fraction = (change.position.y / containerHeight).coerceIn(0f, 1f)
-                            val targetIndex = (fraction * totalItems).toInt().coerceIn(0, totalItems - 1)
-                            coroutineScope.launch {
-                                state.scrollToItem(targetIndex)
-                            }
+
+                        val pointerId = down.id
+                        while (true) {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                            if (!change.pressed) break
+
                             change.consume()
+                            val currentTotalItems = state.layoutInfo.totalItemsCount
+                            if (currentTotalItems > 0) {
+                                val fraction = (change.position.y / size.height).coerceIn(0f, 1f)
+                                val targetIndex = (fraction * currentTotalItems).toInt().coerceIn(0, currentTotalItems - 1)
+                                coroutineScope.launch {
+                                    state.scrollToItem(targetIndex)
+                                }
+                            }
                         }
                     }
                 }
-            )
+            }
         }
         .drawWithContent {
             drawContent()
@@ -295,10 +298,10 @@ fun Modifier.drawScrollbar(
                     } else 0f
 
                     drawRoundRect(
-                        color = color,
-                        topLeft = Offset((size.width - width.toPx()).coerceAtLeast(0f), scrollbarOffsetY),
-                        size = Size(width.toPx().coerceAtMost(size.width), scrollbarHeight),
-                        cornerRadius = CornerRadius(width.toPx() / 2, width.toPx() / 2)
+                        color= color,
+                        topLeft= Offset((size.width - width.toPx()).coerceAtLeast(0f), scrollbarOffsetY),
+                        size= Size(width.toPx().coerceAtMost(size.width), scrollbarHeight),
+                        cornerRadius= CornerRadius(width.toPx() / 2, width.toPx() / 2)
                     )
                 }
             }
