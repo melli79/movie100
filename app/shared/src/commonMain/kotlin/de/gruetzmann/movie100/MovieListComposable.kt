@@ -3,6 +3,7 @@ package de.gruetzmann.movie100
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ButtonColors
@@ -30,8 +32,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.gruetzmann.movie100.managers.MovieManager
@@ -84,6 +92,8 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                 .weight(1f)
                 .padding(10.dp)
                 .background(MaterialTheme.colorScheme.background)
+                .drawScrollbar(listState),
+            userScrollEnabled= true
         ) {
             itemsIndexed(filteredMovies, key= { _, movie -> movie.id }) { _, movie ->
                 val originalIndex = movies.indexOfFirst { it.id == movie.id }
@@ -205,4 +215,92 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
             searchQuery = ""
         }
     }
+}
+
+@Composable
+fun Modifier.drawScrollbar(
+    state: LazyListState,
+    color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    width: Dp = 8.dp,
+    hitWidth: Dp = 24.dp
+): Modifier {
+    val coroutineScope = rememberCoroutineScope()
+    var containerHeight by remember { mutableFloatStateOf(1f) }
+
+    return this
+        .onGloballyPositioned { layoutCoordinates ->
+            containerHeight = layoutCoordinates.size.height.toFloat()
+        }
+        .pointerInput(state) {
+            val hitWidthPx = hitWidth.toPx()
+            detectVerticalDragGestures(
+                onDragStart = { offset ->
+                    if (size.width > 0 && size.height > 0 && offset.x >= size.width - hitWidthPx) {
+                        val totalItems = state.layoutInfo.totalItemsCount
+                        if (totalItems > 0 && containerHeight >= 48f) {
+                            val fraction = (offset.y / containerHeight).coerceIn(0f, 1f)
+                            val targetIndex = (fraction * totalItems).toInt().coerceIn(0, totalItems - 1)
+                            coroutineScope.launch {
+                                state.scrollToItem(targetIndex)
+                            }
+                        }
+                    }
+                },
+                onVerticalDrag = { change, _ ->
+                    if (size.width > 0 && size.height > 0 && change.position.x >= size.width - hitWidthPx * 2) {
+                        val totalItems = state.layoutInfo.totalItemsCount
+                        if (totalItems > 0 && containerHeight >= 48f) {
+                            val fraction = (change.position.y / containerHeight).coerceIn(0f, 1f)
+                            val targetIndex = (fraction * totalItems).toInt().coerceIn(0, totalItems - 1)
+                            coroutineScope.launch {
+                                state.scrollToItem(targetIndex)
+                            }
+                            change.consume()
+                        }
+                    }
+                }
+            )
+        }
+        .drawWithContent {
+            drawContent()
+            if (size.height <= 0f || size.width <= 0f) return@drawWithContent
+
+            val layoutInfo = state.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            if (totalItems > 3) {
+                val visibleItems = layoutInfo.visibleItemsInfo
+                if (visibleItems.isNotEmpty()) {
+                    val firstItem = visibleItems.first()
+                    val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+
+                    val avgItemSize = visibleItems.sumOf { it.size }.toFloat() / visibleItems.size
+                    val totalEstimatedHeight = avgItemSize * totalItems
+                    if (totalEstimatedHeight <= 0f) return@drawWithContent
+
+                    val minScrollbarHeight = 24.dp.toPx().coerceAtMost(size.height)
+                    if (minScrollbarHeight <= 0f) return@drawWithContent
+
+                    val rawScrollbarHeight = (viewportHeight.toFloat() / totalEstimatedHeight * size.height)
+                    val scrollbarHeight = rawScrollbarHeight.coerceIn(minScrollbarHeight, size.height)
+
+                    val maxOffsetY = (size.height - scrollbarHeight).coerceAtLeast(0f)
+
+                    val scrollRatio = if (totalItems > visibleItems.size) {
+                        val firstItemSize = if (firstItem.size > 0) firstItem.size.toFloat() else 1f
+                        (state.firstVisibleItemIndex.toFloat() + state.firstVisibleItemScrollOffset.toFloat() / firstItemSize) / (totalItems - visibleItems.size + 1)
+                    } else 0f
+
+                    val scrollbarOffsetY = if (maxOffsetY > 0f) {
+                        (scrollRatio * maxOffsetY).coerceIn(0f, maxOffsetY)
+                    } else 0f
+
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset((size.width - width.toPx()).coerceAtLeast(0f), scrollbarOffsetY),
+                        size = Size(width.toPx().coerceAtMost(size.width), scrollbarHeight),
+                        cornerRadius = CornerRadius(width.toPx() / 2, width.toPx() / 2)
+                    )
+                }
+            }
+        }
 }

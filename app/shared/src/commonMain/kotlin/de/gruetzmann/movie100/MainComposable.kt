@@ -23,21 +23,21 @@ fun MainComposable(login :String, logout:()->Unit) {
     val manager = MovieManager
     val coroutineScope = rememberCoroutineScope()
     Column(
-        modifier = Modifier
+        modifier= Modifier
             .background(MaterialTheme.colorScheme.primaryContainer)
             .safeContentPadding()
             .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment= Alignment.CenterHorizontally,
     ) {
         Row(modifier= Modifier.fillMaxWidth()) {
             Spacer(modifier= Modifier.weight(1f))
             Text("Hi $login!")
             Spacer(modifier= Modifier.weight(1f))
-            Button(onClick = { logout() }) {
+            Button(onClick= { logout() }) {
                 Text("Logout")
             }
             Button(colors= ButtonColors(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceDim),
-                onClick = { coroutineScope.launch {
+                onClick= { coroutineScope.launch {
                     try {
                         manager.deleteUser()
                     } catch (e :Exception) {

@@ -68,8 +68,8 @@ fun MovieSearchBar(login :String) {
 
                 )
             },
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
+            expanded= expanded,
+            onExpandedChange= { expanded = it },
         ) {
             for (movie in movieCandidates) {
                 Button(modifier= Modifier.fillMaxWidth(), shape= RoundedCornerShape(10.dp),
