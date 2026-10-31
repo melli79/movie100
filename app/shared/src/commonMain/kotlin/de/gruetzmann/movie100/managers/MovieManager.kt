@@ -249,11 +249,11 @@ object MovieManager {
         notifySubscribers()
     }
 
-    suspend fun deleteUser() :Boolean {
+    suspend fun deleteUser(confirm :String) :Boolean {
         try {
             http.delete("$serverUrl/user/$login") {
                 contentType(ContentType.Text.Plain)
-                setBody("DELETE")
+                setBody(confirm)
             }
             return true
         } catch (e :Throwable) {
