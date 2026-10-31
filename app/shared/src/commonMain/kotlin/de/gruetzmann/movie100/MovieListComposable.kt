@@ -17,12 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,9 +61,9 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
             movies
         } else {
             movies.filter { movie ->
-                movie.title.contains(searchQuery, ignoreCase = true) ||
-                        (movie.director?.contains(searchQuery, ignoreCase = true) == true) ||
-                        movie.actors.any { actor -> actor.contains(searchQuery, ignoreCase = true) }
+                movie.title.contains(searchQuery, ignoreCase= true) ||
+                        (movie.director?.contains(searchQuery, ignoreCase= true) == true) ||
+                        movie.actors.any { actor -> actor.contains(searchQuery, ignoreCase= true) }
             }
         }
     }
@@ -108,7 +106,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                 ) {
                     Column(horizontalAlignment= Alignment.CenterHorizontally,
                         verticalArrangement= Arrangement.Center,
-                        modifier= Modifier.padding(end = 8.dp)
+                        modifier= Modifier.padding(end= 8.dp)
                     ) {
                         Text("${index + 1}")
                         IconButton(
@@ -178,7 +176,7 @@ fun MovieListComposable(login :String, modifier :Modifier =Modifier) {
                     }
                     val poster = movie.poster
                     if (poster != null)
-                        Image(poster, movie.title, modifier= Modifier.width(100.dp).height(230.dp).padding(end = 8.dp))
+                        Image(poster, movie.title, modifier= Modifier.width(100.dp).height(230.dp).padding(end= 8.dp))
                     else
                         movieManager.loadImage(movie)
 
@@ -233,7 +231,7 @@ fun Modifier.drawScrollbar(
         .pointerInput(state) {
             val hitWidthPx = hitWidth.toPx()
             awaitEachGesture {
-                val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                val down = awaitFirstDown(pass= PointerEventPass.Initial)
                 if (size.width > 0 && size.height > 0 && down.position.x >= size.width - hitWidthPx) {
                     val totalItems = state.layoutInfo.totalItemsCount
                     if (totalItems > 0) {
@@ -246,7 +244,7 @@ fun Modifier.drawScrollbar(
 
                         val pointerId = down.id
                         while (true) {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val event = awaitPointerEvent(pass= PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == pointerId } ?: break
                             if (!change.pressed) break
 

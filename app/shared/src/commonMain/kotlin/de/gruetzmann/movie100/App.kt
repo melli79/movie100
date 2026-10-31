@@ -20,7 +20,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.gruetzmann.movie100.managers.MovieManager
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,7 +51,7 @@ fun App() {
                     Text("Password: ")
                     TextField(value= password, onValueChange= { password = it }, singleLine= true,
                         visualTransformation= PasswordVisualTransformation(),
-                        keyboardActions= KeyboardActions(onDone = { coroutineScope.launch {
+                        keyboardActions= KeyboardActions(onDone= { coroutineScope.launch {
                             showContent = manager.login(login, password)
                         } }),
                     )
@@ -60,9 +59,9 @@ fun App() {
                 Spacer(modifier= Modifier.height(16.dp))
                 Row(modifier= Modifier.fillMaxWidth()) {
                     Spacer(Modifier.weight(1f))
-                    Button(onClick = { coroutineScope.launch {
+                    Button(onClick= { coroutineScope.launch {
                         showContent = manager.login(login, password)
-                    } }, enabled = login.isNotBlank() && password.isNotBlank()) {
+                    } }, enabled= login.isNotBlank() && password.isNotBlank()) {
                         Text("Enter")
                     }
                 }

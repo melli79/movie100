@@ -36,6 +36,7 @@ val random = Random(Clock.System.now().epochSeconds)
 
 object MovieManager {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val posterDispatcher = Dispatchers.Default.limitedParallelism(2)
     private val mainScope = CoroutineScope(Dispatchers.Main)
     private val http = HttpClient {
         install(ContentNegotiation) {
@@ -58,7 +59,7 @@ object MovieManager {
         if (login.isBlank() || password.isBlank())
             return false
         val preferences = http.post {
-            url(serverUrl+"/login/$login")
+            url("$serverUrl/login/$login")
         }.body<PreferencesDto?>() ?: PreferencesDto(ulidFactory.nextULID(), knownMovies.toMutableList())
         usersMovies.clear()
         preferences.movies.forEach { movie ->
@@ -91,7 +92,7 @@ object MovieManager {
 
     fun addMovie(movie :Movie, notify :Boolean =true) :Boolean {
         if (usersMovies.none { it.id == movie.id }) {
-            var candidate = movies.get(movie.id)
+            var candidate = movies[movie.id]
             if (candidate!=null) {
                 usersMovies.add(candidate)
                 if (notify) {
@@ -111,21 +112,22 @@ object MovieManager {
                 }
             }
 
-            if (loadAll && movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
-                try { // TODO: prefer posters of visible movie descriptions
-                    val bitmap = loadImageNow(movie.posterUrl.location)
-                    if (bitmap != null) {
-                        url2poster.put(movie.posterUrl.location, bitmap)
-                        notifySubscribers()
-                    }
-                } catch (e: Throwable) {
-                    println("Error loading poster image: ${e.message}")
-                    if (e is OutOfMemoryError) {
-                        url2poster.resize(100)
-                        loadAll = false
+            if (loadAll && movie.posterUrl != null && url2poster[movie.posterUrl.location]==null)
+                coroutineScope.launch(posterDispatcher) {
+                    try {
+                        val bitmap = loadImageNow(movie.posterUrl.location)
+                        if (bitmap != null) {
+                            url2poster.put(movie.posterUrl.location, bitmap)
+                            notifySubscribers()
+                        }
+                    } catch (e: Throwable) {
+                        println("Error loading poster image: ${e.message}")
+                        if (e is OutOfMemoryError) {
+                            url2poster.resize(100)
+                            loadAll = false
+                        }
                     }
                 }
-            }
 
             if (movie.actors.isEmpty()) coroutineScope.launch {
                 try {
@@ -163,26 +165,6 @@ object MovieManager {
             subscriber(usersMovies.map(this::toMovie))
     }
 
-    private fun loadKnownMovies() {
-        knownMovies.forEach { movie ->
-            movies.put(movie.id, movie)
-            usersMovies.add(movie)
-        }
-        notifySubscribers()
-        coroutineScope.launch {
-            usersMovies.forEachIndexed { index, movie ->
-                val posterUrl = movie.poster
-                if (posterUrl!=null) launch {
-                    val bitmap = loadImageNow(posterUrl.location)
-                    if (bitmap != null) {
-                        url2poster.put(posterUrl.location, bitmap)
-                        notifySubscribers()
-                    }
-                }
-            }
-        }
-    }
-
     private fun toMovie(dto :MovieDto) = Movie(
         id = dto.id,
         title = dto.title,
@@ -190,12 +172,12 @@ object MovieManager {
         inceptionYear = dto.releaseDate?.years(),
         director = dto.director,
         posterUrl = dto.poster,
-        poster= if (dto.poster!=null) url2poster.get(dto.poster!!.location)  else null,
+        poster= if (dto.poster!=null) url2poster[dto.poster!!.location]  else null,
         details = dto.description
     )
 
     fun loadImage(movie :Movie) {
-        if (movie.posterUrl != null && url2poster.get(movie.posterUrl.location)==null) coroutineScope.launch {
+        if (movie.posterUrl != null && url2poster[movie.posterUrl.location]==null) coroutineScope.launch {
             try {
                 val bitmap = loadImageNow(movie.posterUrl.location)
                 if (bitmap != null) {
@@ -268,10 +250,16 @@ object MovieManager {
     }
 
     suspend fun deleteUser() :Boolean {
-        http.delete("$serverUrl/user/$login") {
-            contentType(ContentType.Text.Plain)
-            setBody("DELETE")
+        try {
+            http.delete("$serverUrl/user/$login") {
+                contentType(ContentType.Text.Plain)
+                setBody("DELETE")
+            }
+            return true
+        } catch (e :Throwable) {
+            e.printStackTrace()
+            println("Error deleting user: ${e.message}")
+            return false
         }
-        return true
     }
 }

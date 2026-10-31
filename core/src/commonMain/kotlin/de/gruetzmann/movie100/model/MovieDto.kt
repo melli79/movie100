@@ -1,7 +1,6 @@
 package de.gruetzmann.movie100.model
 
 import kotlinx.serialization.Serializable
-import ulid.ULID
 import kotlin.time.Clock.System.now
 import kotlin.time.Instant
 
