@@ -32,6 +32,7 @@ import kotlin.random.Random
 import kotlin.time.Clock
 
 expect val serverUrl :String
+expect fun isOutOfMemoryError(e: Throwable): Boolean
 val random = Random(Clock.System.now().epochSeconds)
 
 object MovieManager {
@@ -122,7 +123,7 @@ object MovieManager {
                         }
                     } catch (e: Throwable) {
                         println("Error loading poster image: ${e.message}")
-                        if (e is OutOfMemoryError) {
+                        if (isOutOfMemoryError(e)) {
                             url2poster.resize(100)
                             loadAll = false
                         }
