@@ -20,8 +20,6 @@ import uk.co.conoregan.themoviedbapi.model.core.Movie
 import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
 import uk.co.conoregan.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlin.time.toJavaDuration
@@ -47,7 +45,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
         if (candidate==null) {
             candidate = transaction {
                 val movieRow = MoviesTable.selectAll()
-                    .firstOrNull { it[MoviesTable.id].equals(id) }
+                    .firstOrNull { it[MoviesTable.id]==id }
                 val actorsPo = if (movieRow!=null) (MovieActorsTable innerJoin ActorsTable)
                     .selectAll()
                     .where { MovieActorsTable.movieId eq id }
@@ -68,7 +66,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                         title= movieRow[MoviesTable.title],
                         poster= movieRow[MoviesTable.poster]?.let { Url(it) },
                         actors= actors.toMutableList(),
-                        director= movieRow[MoviesTable.director],
+                        director= movieRow[MoviesTable.director] ?: director,
                         releaseDate= movieRow[MoviesTable.releaseDate]?.let { Instant.fromEpochSeconds(it.toLong()) },
                         description= movieRow[MoviesTable.description]
                     )

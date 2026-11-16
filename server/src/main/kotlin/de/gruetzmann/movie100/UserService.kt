@@ -108,7 +108,7 @@ object UserService {
                 it[description] = movie.description
             }
 
-            for ((actorIndex, actor) in movie.actors.withIndex()) {
+            for ([actorIndex, actor] in movie.actors.withIndex()) {
                 ActorsTable.upsert {
                     it[id] = actor.id
                     it[name] = actor.name

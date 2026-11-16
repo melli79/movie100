@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun MovieSearchBar(login :String) {
+fun MovieSearchBar() {
     val movieManager = MovieManager
     val coroutineScope = rememberCoroutineScope()
     var movieName by remember { mutableStateOf("") }
