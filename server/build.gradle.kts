@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.jetbrains.exposed.jdbc)
     implementation(libs.jetbrains.exposed.dao)
     implementation(libs.sqlite.jdbc)
+    implementation(libs.guava.jvm)
 
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
