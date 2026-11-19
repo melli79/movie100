@@ -2,18 +2,21 @@ package org.grutzmann.movie100.springserver
 
 import de.gruetzmann.movie100.model.ErrorDto
 import de.gruetzmann.movie100.model.LoginDto
+import de.gruetzmann.movie100.model.PreferencesDto
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import ulid.ULID
 
 @RestController
 @RequestMapping
-class UserController(private val userService: UserService) {
+class UserController(private val userService: UserService, private val movieService :MovieService) {
 
     @PostMapping("/login/{user}")
     fun loginWithPath(
@@ -47,5 +50,18 @@ class UserController(private val userService: UserService) {
         }
         val preferences = userService.login(username, password)
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(preferences)
+    }
+
+    @PutMapping("/preferences/{userId}")
+    fun putUserPreferences(
+        @PathVariable("userId") userIdString :String,
+        @RequestBody(required= true) preferences :PreferencesDto
+    ) :ResponseEntity<*> {
+        val userId = ULID.parseULID(userIdString)
+        userService.findUser(userId) ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorDto("Cannot find user ${userId}"))
+        if (preferences.userId!=userId)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorDto("userId does not match"))
+        val saved = movieService.savePreferences(preferences)
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(saved)
     }
 }

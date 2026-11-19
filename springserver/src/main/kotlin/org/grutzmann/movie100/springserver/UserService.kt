@@ -115,4 +115,20 @@ class UserService(
             movies= resultMovies.toMutableList()
         )
     }
+
+    fun findUser(id :ULID) :UserDto? {
+        val users = jdbcTemplate.query(
+            "SELECT id, name, login, avatar FROM users WHERE id = ?",
+            { rs, _ ->
+                UserDto(
+                    id= ULID.parseULID(rs.getString("id")),
+                    name= rs.getString("name"),
+                    login= rs.getString("login"),
+                    avatar= rs.getString("avatar")?.let { Url(it) }
+                )
+            },
+            id.toString()
+        )
+        return users.firstOrNull()
+    }
 }

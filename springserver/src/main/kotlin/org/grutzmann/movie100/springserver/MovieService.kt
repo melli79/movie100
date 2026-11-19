@@ -6,17 +6,21 @@ import de.gruetzmann.movie100.model.Gender.FEMALE
 import de.gruetzmann.movie100.model.Gender.MALE
 import de.gruetzmann.movie100.model.Gender.OTHER
 import de.gruetzmann.movie100.model.MovieDto
+import de.gruetzmann.movie100.model.PreferencesDto
 import de.gruetzmann.movie100.model.Url
 import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.core.ResultSetExtractor
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import uk.co.conoregan.themoviedbapi.TmdbApi
 import uk.co.conoregan.themoviedbapi.model.core.Movie
 import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
 import uk.co.conoregan.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse
 import ulid.ULID
+import java.sql.ResultSet
 import kotlin.time.Instant
 
 @Service
@@ -113,10 +117,8 @@ class MovieService(
             qr.id, qr.title, qr.posterPath?.let { Url("https://image.tmdb.org/t/p/w300$it") },
             qr.credits.cast.take(3).map(::toDto).toMutableList(),
             getDirector(qr.credits.crew), Instant.parse(qr.releaseDate + "T00:00:00Z"),
-            description = if (qr.overview.isNullOrBlank()) null else qr.overview
+            description= if (qr.overview.isNullOrBlank()) null else qr.overview
         )
-        val actors = qr.credits.cast.map(::toDto)
-        result.actors.addAll(actors)
         return result
     }
 
@@ -133,7 +135,7 @@ class MovieService(
         val qr = tmdbClient.people.getDetails(id, "en")
         return ActorDto(qr.id, name= qr.name, gender= toGender(qr.gender),
             birthyear= qr.birthday?.substring(0..<4)?.toIntOrNull(),
-            specialty= qr.biography.substring(0..<512))
+            specialty= qr.biography.take(512))
     }
 
     @CachePut(cacheNames= ["actors"], key= "#cast.id")
@@ -145,5 +147,38 @@ class MovieService(
         TmdbGender.MALE -> MALE
         TmdbGender.FEMALE -> FEMALE
         else -> OTHER
+    }
+
+    @Transactional
+    fun savePreferences(preferences :PreferencesDto) :PreferencesDto {
+        val userId = preferences.userId
+        jdbcTemplate.update("""delete from user_movies where user_id = ?""", userId.toString())
+        var actors = preferences.movies.flatMap { it.actors }.toSet()
+        actors = actors.map { getActor(it.id) }.toSet()
+        for (actor in actors)
+            jdbcTemplate.update("""insert into actors (id, name, gender, birthyear, specialty) values (?,?,?,?,?) on conflict (id) do
+                | update set name = ?, gender = ?, birthyear = ?, specialty = ?""".trimMargin(),
+                actor.id, actor.name, actor.gender.ordinal, actor.birthyear, actor.specialty,
+                actor.name, actor.gender.ordinal, actor.birthyear, actor.specialty)
+        val resultMovies = mutableListOf<MovieDto>()
+        for (movie in preferences.movies) {
+            val proper = getFullMovie(movie.id)
+            val num :Int = jdbcTemplate.update("""insert into movies (id, title, release_date, director, description)
+                | values (?,?,?,?,?) on conflict (id) do 
+                | update set title = ?, release_date = ?, director = ?, description = ?""".trimMargin(),
+                proper.id, proper.title, proper.releaseDate?.toEpochMilliseconds(), proper.director, proper.description,
+                proper.title, proper.releaseDate?.toEpochMilliseconds(), proper.director, proper.description)
+            jdbcTemplate.update("""delete from movie_actors where movie_id = ?""", proper.id)
+            proper.actors.distinct().forEachIndexed { index, actor ->
+                jdbcTemplate.update("""insert into movie_actors (movie_id, actor_id, order_index) values (?,?,?)""",
+                    proper.id, actor.id, index)
+            }
+            resultMovies.add(proper)
+        }
+        resultMovies.forEachIndexed { index, movie ->
+            jdbcTemplate.update("""insert into user_movies (user_id, movie_id, order_index) values (?,?,?)""",
+                userId.toString(), movie.id, index)
+        }
+        return PreferencesDto(userId= userId, movies= resultMovies)
     }
 }
