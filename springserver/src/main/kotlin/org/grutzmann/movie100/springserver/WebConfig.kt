@@ -74,10 +74,10 @@ class WebConfig : WebMvcConfigurer {
             var value :JsonToken? = p.currentToken()
             if (value==null)
                 value = p.nextToken()
-            if (value == JsonToken.VALUE_NULL)
-                return null
+            return if (value == JsonToken.VALUE_NULL)
+                null
             else
-                return ULID.parseULID(value.asString())
+                ULID.parseULID(value.asString())
         }
     }
 

@@ -11,7 +11,6 @@ import de.gruetzmann.movie100.model.Url
 import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.jdbc.core.ResultSetExtractor
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.co.conoregan.themoviedbapi.TmdbApi
@@ -20,7 +19,6 @@ import uk.co.conoregan.themoviedbapi.model.movies.Cast
 import uk.co.conoregan.themoviedbapi.model.movies.Crew
 import uk.co.conoregan.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse
 import ulid.ULID
-import java.sql.ResultSet
 import kotlin.time.Instant
 
 @Service
@@ -96,7 +94,7 @@ class MovieService(
             val gender = try {
                 Gender.valueOf(genderStr)
             } catch (e :Exception) {
-                Gender.MALE
+                MALE
             }
 
             ActorDto(
@@ -116,7 +114,8 @@ class MovieService(
         val result = MovieDto(
             qr.id, qr.title, qr.posterPath?.let { Url("https://image.tmdb.org/t/p/w300$it") },
             qr.credits.cast.take(3).map(::toDto).toMutableList(),
-            getDirector(qr.credits.crew), Instant.parse(qr.releaseDate + "T00:00:00Z"),
+            getDirector(qr.credits.crew),
+            releaseDate= qr.releaseDate?.let { if (it.length>=10) Instant.parse(it + "T00:00:00Z")  else null},
             description= if (qr.overview.isNullOrBlank()) null else qr.overview
         )
         return result
@@ -134,7 +133,7 @@ class MovieService(
     fun getActor(id :Int) :ActorDto {
         val qr = tmdbClient.people.getDetails(id, "en")
         return ActorDto(qr.id, name= qr.name, gender= toGender(qr.gender),
-            birthyear= qr.birthday?.substring(0..<4)?.toIntOrNull(),
+            birthyear= qr.birthday?.let { if (it.length>=4) it.substring(0..<4).toIntOrNull()  else null },
             specialty= qr.biography.take(512))
     }
 
@@ -163,11 +162,11 @@ class MovieService(
         val resultMovies = mutableListOf<MovieDto>()
         for (movie in preferences.movies) {
             val proper = getFullMovie(movie.id)
-            val num :Int = jdbcTemplate.update("""insert into movies (id, title, release_date, director, description)
+            jdbcTemplate.update("""insert into movies (id, title, release_date, director, description)
                 | values (?,?,?,?,?) on conflict (id) do 
                 | update set title = ?, release_date = ?, director = ?, description = ?""".trimMargin(),
                 proper.id, proper.title, proper.releaseDate?.toEpochMilliseconds(), proper.director, proper.description,
-                proper.title, proper.releaseDate?.toEpochMilliseconds(), proper.director, proper.description)
+                proper.title, proper.releaseDate?.epochSeconds, proper.director, proper.description)
             jdbcTemplate.update("""delete from movie_actors where movie_id = ?""", proper.id)
             proper.actors.distinct().forEachIndexed { index, actor ->
                 jdbcTemplate.update("""insert into movie_actors (movie_id, actor_id, order_index) values (?,?,?)""",

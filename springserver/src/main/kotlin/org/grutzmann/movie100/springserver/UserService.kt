@@ -108,7 +108,7 @@ class UserService(
         }
 
         val movies = movieService.getMoviesForUser(user.id)
-        val resultMovies = if (movies.isNotEmpty()) movies else knownMovies
+        val resultMovies = movies.ifEmpty { knownMovies }
 
         return PreferencesDto(
             userId= user.id,
@@ -116,9 +116,9 @@ class UserService(
         )
     }
 
-    fun findUser(id :ULID) :UserDto? {
+    fun findUser(login :String) :UserDto? {
         val users = jdbcTemplate.query(
-            "SELECT id, name, login, avatar FROM users WHERE id = ?",
+            "SELECT id, name, login, avatar FROM users WHERE login = ?",
             { rs, _ ->
                 UserDto(
                     id= ULID.parseULID(rs.getString("id")),
@@ -127,7 +127,7 @@ class UserService(
                     avatar= rs.getString("avatar")?.let { Url(it) }
                 )
             },
-            id.toString()
+            login
         )
         return users.firstOrNull()
     }

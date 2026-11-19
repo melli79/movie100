@@ -11,7 +11,7 @@ object SqliteJdbcDialect : JdbcDialect, Dialect by AnsiDialect.INSTANCE
 
 @Configuration
 class DatabaseConfig : AbstractJdbcConfiguration() {
-    override fun jdbcDialect(operations:NamedParameterJdbcOperations):JdbcDialect {
+    override fun jdbcDialect(operations :NamedParameterJdbcOperations) :JdbcDialect {
         return SqliteJdbcDialect
     }
 }

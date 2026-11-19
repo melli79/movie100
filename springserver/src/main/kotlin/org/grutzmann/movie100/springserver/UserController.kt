@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import ulid.ULID
 
 @RestController
 @RequestMapping
-class UserController(private val userService: UserService, private val movieService :MovieService) {
+class UserController(
+    private val userService: UserService,
+    private val movieService :MovieService,
+) {
 
     @PostMapping("/login/{user}")
     fun loginWithPath(
@@ -52,14 +54,13 @@ class UserController(private val userService: UserService, private val movieServ
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(preferences)
     }
 
-    @PutMapping("/preferences/{userId}")
+    @PutMapping("/preferences/{login}")
     fun putUserPreferences(
-        @PathVariable("userId") userIdString :String,
+        @PathVariable("login") login :String,
         @RequestBody(required= true) preferences :PreferencesDto
     ) :ResponseEntity<*> {
-        val userId = ULID.parseULID(userIdString)
-        userService.findUser(userId) ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorDto("Cannot find user ${userId}"))
-        if (preferences.userId!=userId)
+        val user = userService.findUser(login) ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorDto("Cannot find user $login"))
+        if (preferences.userId!=user.id)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorDto("userId does not match"))
         val saved = movieService.savePreferences(preferences)
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(saved)
