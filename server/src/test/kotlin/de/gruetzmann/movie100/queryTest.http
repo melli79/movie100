@@ -9,6 +9,9 @@ Accept: application/json
 ### login
 POST http://localhost:8080/login/melli
 Accept: application/json
+Content-Type: application/json
+
+{ "password": "geheim" }
 
 ### preferences
 PUT http://localhost:8080/preferences/01M5DKVJ077PEWAN4HNV2XXYS9

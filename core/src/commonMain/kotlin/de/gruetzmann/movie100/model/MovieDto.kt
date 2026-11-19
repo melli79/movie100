@@ -11,7 +11,7 @@ data class MovieDto(
     var poster :Url? =null,
     val actors :MutableList<ActorDto> =mutableListOf(),
     var director :String? =null,
-    @Serializable(with = InstantSerializer::class)
+    @Serializable(with= InstantSerializer::class)
     var releaseDate :Instant? =null,
     var description :String? =null,
 ) {

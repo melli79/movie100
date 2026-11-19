@@ -3,6 +3,7 @@ package de.gruetzmann.movie100.managers
 import androidx.collection.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import de.gruetzmann.movie100.model.ErrorDto
+import de.gruetzmann.movie100.model.LoginDto
 import de.gruetzmann.movie100.model.MovieDto
 import de.gruetzmann.movie100.model.PreferencesDto
 import de.gruetzmann.movie100.model.inits.knownMovies
@@ -61,6 +62,8 @@ object MovieManager {
             return false
         val preferences = http.post {
             url("$serverUrl/login/$login")
+            contentType(ContentType.Application.Json)
+            setBody(LoginDto(password= password))
         }.body<PreferencesDto?>() ?: PreferencesDto(ulidFactory.nextULID(), knownMovies.toMutableList())
         usersMovies.clear()
         preferences.movies.forEach { movie ->

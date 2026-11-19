@@ -22,7 +22,7 @@ object MoviesTable : Table("movies") {
     val title = varchar("title", 255)
     val poster = varchar("poster", 1024).nullable()
     val director = varchar("director", 255).nullable()
-    val releaseDate = ulong("release_date").nullable()
+    val releaseDate = long("release_date").nullable()
     val description = text("description").nullable()
 
     override val primaryKey = PrimaryKey(id)

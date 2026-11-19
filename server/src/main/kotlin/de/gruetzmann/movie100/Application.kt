@@ -19,6 +19,7 @@ import io.ktor.server.request.receive
 import kotlinx.serialization.json.Json
 import ulid.ULID
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 val random = Random(System.currentTimeMillis())
 val ulidFactory = ULID.Factory(random)
@@ -63,6 +64,8 @@ fun Application.module() {
     }
     val userService = UserService
     val movieService = if (tmdbClient!=null) MovieService(tmdbClient)  else null
+//    MovieService.exportAll(".")
+//    exitProcess(0)
 
     routing {
         get("/search") {

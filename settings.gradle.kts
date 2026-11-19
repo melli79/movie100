@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.maven
+
 rootProject.name = "Movie100"
 
 pluginManagement {
@@ -11,6 +13,8 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://repo.spring.io/snapshot") }
+        maven { url = uri("https://repo.spring.io/milestone") }
     }
 }
 
@@ -24,6 +28,7 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven { url = uri("https://repo.spring.io/snapshot") }
     }
 }
 
@@ -36,4 +41,5 @@ include(":app:desktopApp")
 include(":app:shared")
 include(":app:webApp")
 include(":core")
-include(":server")
+//include(":server")
+include(":springserver")
