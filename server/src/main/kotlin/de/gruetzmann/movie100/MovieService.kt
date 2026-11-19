@@ -73,7 +73,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                         poster = movieRow[MoviesTable.poster]?.let { Url(it) },
                         actors = actors.toMutableList(),
                         director = movieRow[MoviesTable.director] ?: director,
-                        releaseDate = movieRow[MoviesTable.releaseDate]?.let { Instant.fromEpochSeconds(it.toLong()) },
+                        releaseDate = movieRow[MoviesTable.releaseDate]?.let { Instant.fromEpochSeconds(it) },
                         description = movieRow[MoviesTable.description]
                     )
                 }
@@ -90,7 +90,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                     it[title] = result.title
                     it[poster] = result.poster?.location
                     it[director] = result.director
-                    it[MoviesTable.releaseDate] = result.releaseDate?.epochSeconds?.toULong()
+                    it[MoviesTable.releaseDate] = result.releaseDate?.epochSeconds
                     it[description] = result.description
                 }
                 result.actors.forEachIndexed { index, dto ->
@@ -130,7 +130,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                     it[title] = candidate.title
                     it[poster] = candidate.poster?.location
                     it[director] = candidate.director
-                    it[releaseDate] = candidate.releaseDate?.epochSeconds?.toULong()
+                    it[releaseDate] = candidate.releaseDate?.epochSeconds
                     it[description] = candidate.description
                 }
                 candidate.actors.forEachIndexed { index, actor ->

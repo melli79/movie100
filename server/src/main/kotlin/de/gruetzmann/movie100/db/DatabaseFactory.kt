@@ -91,7 +91,7 @@ object DatabaseFactory {
                         it[title] = movie.title
                         it[poster] = movie.poster?.location
                         it[director] = movie.director
-                        it[releaseDate] = movie.releaseDate?.epochSeconds?.toULong()
+                        it[releaseDate] = movie.releaseDate?.epochSeconds
                         it[description] = movie.description
                     }
 

@@ -75,7 +75,7 @@ object UserService {
                 poster= movieRow[MoviesTable.poster]?.let { Url(it) },
                 actors= actors,
                 director= movieRow[MoviesTable.director],
-                releaseDate= movieRow[MoviesTable.releaseDate]?.let { Instant.fromEpochSeconds(it.toLong()) },
+                releaseDate= movieRow[MoviesTable.releaseDate]?.let { Instant.fromEpochSeconds(it) },
                 description= movieRow[MoviesTable.description]
             )
         }.toMutableList()
@@ -95,8 +95,8 @@ object UserService {
         }
 
         for (movie in preferences.movies) {
-            if (movie.actors.size > 5) {
-                movie.actors.dropLast(movie.actors.size - 5)
+            while (movie.actors.size > 5) {
+                movie.actors.removeLast()
             }
 
             MoviesTable.upsert {
@@ -104,7 +104,7 @@ object UserService {
                 it[title] = movie.title
                 it[poster] = movie.poster?.location
                 it[director] = movie.director
-                it[releaseDate] = movie.releaseDate?.epochSeconds?.toULong()
+                it[releaseDate] = movie.releaseDate?.epochSeconds
                 it[description] = movie.description
             }
 
