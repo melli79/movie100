@@ -7,6 +7,7 @@ import de.gruetzmann.movie100.model.Gender.MALE
 import de.gruetzmann.movie100.model.Gender.OTHER
 import de.gruetzmann.movie100.model.MovieDto
 import de.gruetzmann.movie100.model.Url
+import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
@@ -127,6 +128,15 @@ class MovieService(
         return null
     }
 
+    @Cacheable(cacheNames= ["actors"], key="#id")
+    fun getActor(id :Int) :ActorDto {
+        val qr = tmdbClient.people.getDetails(id, "en")
+        return ActorDto(qr.id, name= qr.name, gender= toGender(qr.gender),
+            birthyear= qr.birthday?.substring(0..<4)?.toIntOrNull(),
+            specialty= qr.biography.substring(0..<512))
+    }
+
+    @CachePut(cacheNames= ["actors"], key= "#cast.id")
     internal fun toDto(cast :Cast) :ActorDto = ActorDto(cast.id, cast.name, toGender(cast.gender))
 
     typealias TmdbGender = uk.co.conoregan.themoviedbapi.model.people.Gender
