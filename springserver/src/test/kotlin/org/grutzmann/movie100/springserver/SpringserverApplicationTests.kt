@@ -28,7 +28,7 @@ class SpringserverApplicationTests {
             .content("""{"login": "melli", "password": "geheim"}""")
         )
             .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.userId").exists())
+            .andExpect(jsonPath("$.userId").isString)
             .andExpect(jsonPath("$.movies").isArray)
     }
 
@@ -40,7 +40,7 @@ class SpringserverApplicationTests {
                 .content("""{"login": "melli", "password": "geheim"}""")
         )
             .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.userId").exists())
+            .andExpect(jsonPath("$.userId").isString)
             .andExpect(jsonPath("$.movies").isArray)
     }
 }

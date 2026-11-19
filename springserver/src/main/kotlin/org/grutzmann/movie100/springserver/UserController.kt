@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping
-class LoginController(private val userService: UserService) {
+class UserController(private val userService: UserService) {
 
     @PostMapping("/login/{user}")
     fun loginWithPath(

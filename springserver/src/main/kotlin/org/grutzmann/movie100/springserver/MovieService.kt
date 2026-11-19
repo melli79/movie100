@@ -6,11 +6,34 @@ import de.gruetzmann.movie100.model.MovieDto
 import de.gruetzmann.movie100.model.Url
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
+import uk.co.conoregan.themoviedbapi.TmdbApi
+import uk.co.conoregan.themoviedbapi.model.core.Movie
 import ulid.ULID
 import kotlin.time.Instant
 
 @Service
-class MovieService(private val jdbcTemplate :JdbcTemplate) {
+class MovieService(
+    private val tmdbClient :TmdbApi,
+    private val jdbcTemplate :JdbcTemplate
+) {
+    fun searchMovie(titleQuery :String) :List<MovieDto> {
+        val movies = tmdbClient.search.searchMulti(titleQuery, true, "en", 0)
+        val results = mutableListOf<MovieDto>()
+        for (item in movies.results) {
+            val movie = item as? Movie ?: continue
+            results.add(toDto(movie))
+        }
+        return results
+
+    }
+
+    private fun toDto(tmdb :Movie) = MovieDto(
+        tmdb.id, tmdb.title,
+        if (tmdb.posterPath.isNullOrBlank()) null else Url("https://image.tmdb.org/t/p/w300" + tmdb.posterPath),
+        description = if (!tmdb.overview.isNullOrBlank()) tmdb.overview else null,
+        releaseDate = if (!tmdb.releaseDate.isNullOrBlank()) Instant.parse(tmdb.releaseDate + "T00:00:00Z") else null
+    )
+
     fun getMoviesForUser(userId :ULID) :List<MovieDto> {
         val movies = jdbcTemplate.query(
             """
