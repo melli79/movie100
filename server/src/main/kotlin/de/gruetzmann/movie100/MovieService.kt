@@ -81,7 +81,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                 val result = MovieDto(
                     qr.id, qr.title, qr.posterPath?.let { Url("https://image.tmdb.org/t/p/w300$it") },
                     qr.credits.cast.take(3).map(::toDto).toMutableList(),
-                    getDirector(qr.credits.crew), Instant.parse(qr.releaseDate + "T0:00:00"),
+                    getDirector(qr.credits.crew), Instant.parse(qr.releaseDate + "T00:00:00Z"),
                     description = if (qr.overview.isNullOrBlank()) null else qr.overview
                 )
                 movieCache.put(qr.id, result)
