@@ -83,60 +83,6 @@ object UserService {
         PreferencesDto(user.id, movies)
     }
 
-    fun savePreferences(preferences: PreferencesDto): PreferencesDto = transaction {
-        val userId = preferences.userId.toString()
-        println("User id: $userId")
-        val userExists = UsersTable.selectAll()
-            .where { UsersTable.id eq userId }
-            .count()
-        println("User exists: $userExists")
-        if (userExists<=0) {
-            throw NotFoundException("User not found. Did you login?")
-        }
-
-        for (movie in preferences.movies) {
-            while (movie.actors.size > 5) {
-                movie.actors.removeLast()
-            }
-
-            MoviesTable.upsert {
-                it[id] = movie.id
-                it[title] = movie.title
-                it[poster] = movie.poster?.location
-                it[director] = movie.director
-                it[releaseDate] = movie.releaseDate?.epochSeconds
-                it[description] = movie.description
-            }
-
-            for ([actorIndex, actor] in movie.actors.withIndex()) {
-                ActorsTable.upsert {
-                    it[id] = actor.id
-                    it[name] = actor.name
-                    it[gender] = actor.gender
-                    it[birthyear] = actor.birthyear?.toUInt()
-                    it[specialty] = actor.specialty
-                }
-
-                MovieActorsTable.upsert {
-                    it[movieId] = movie.id
-                    it[actorId] = actor.id
-                    it[orderIndex] = actorIndex
-                }
-            }
-        }
-
-        UserMoviesTable.deleteWhere { this.userId eq userId }
-        preferences.movies.forEachIndexed { movieIndex, movie ->
-            UserMoviesTable.insert {
-                it[this.userId] = userId
-                it[movieId] = movie.id
-                it[orderIndex] = movieIndex
-            }
-        }
-
-        preferences
-    }
-
     fun deleteUser(login :String) :Boolean = transaction {
         val userRow = UsersTable.selectAll()
             .firstOrNull { it[UsersTable.login].equals(login, ignoreCase = true) }
@@ -147,5 +93,15 @@ object UserService {
         UsersTable.deleteWhere { id eq userId }
 
         true
+    }
+
+    fun findUser(login :String) :UserDto? = transaction {
+        val rs = UsersTable.selectAll()
+            .where { UsersTable.login eq login }
+        if (rs.count()<1)
+            return@transaction null
+        val result :ResultRow = rs.first()
+        return@transaction UserDto(ULID.parseULID(result.get(UsersTable.id)), result.get(UsersTable.name),
+            result.get(UsersTable.login), result.get(UsersTable.avatar)?.let { Url(it) })
     }
 }

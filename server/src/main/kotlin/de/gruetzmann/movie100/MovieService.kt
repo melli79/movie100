@@ -4,16 +4,23 @@ import com.google.common.cache.CacheBuilder
 import de.gruetzmann.movie100.db.ActorsTable
 import de.gruetzmann.movie100.db.MovieActorsTable
 import de.gruetzmann.movie100.db.MoviesTable
+import de.gruetzmann.movie100.db.UserMoviesTable
+import de.gruetzmann.movie100.db.UserMoviesTable.movieId
+import de.gruetzmann.movie100.db.UserMoviesTable.orderIndex
+import de.gruetzmann.movie100.db.UsersTable
 import de.gruetzmann.movie100.model.ActorDto
 import de.gruetzmann.movie100.model.Gender
 import de.gruetzmann.movie100.model.Gender.FEMALE
 import de.gruetzmann.movie100.model.Gender.MALE
 import de.gruetzmann.movie100.model.Gender.OTHER
 import de.gruetzmann.movie100.model.MovieDto
+import de.gruetzmann.movie100.model.PreferencesDto
 import de.gruetzmann.movie100.model.Url
+import io.ktor.server.plugins.NotFoundException
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import uk.co.conoregan.themoviedbapi.TmdbApi
 import uk.co.conoregan.themoviedbapi.model.core.Movie
@@ -82,7 +89,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                     qr.id, qr.title, qr.posterPath?.let { Url("https://image.tmdb.org/t/p/w300$it") },
                     qr.credits.cast.take(3).map(::toDto).toMutableList(),
                     getDirector(qr.credits.crew), Instant.parse(qr.releaseDate + "T00:00:00Z"),
-                    description = if (qr.overview.isNullOrBlank()) null else qr.overview
+                    description= if (qr.overview.isNullOrBlank()) null else qr.overview.take(254)
                 )
                 movieCache.put(qr.id, result)
                 MoviesTable.upsert {
@@ -91,7 +98,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                     it[poster] = result.poster?.location
                     it[director] = result.director
                     it[MoviesTable.releaseDate] = result.releaseDate?.epochSeconds
-                    it[description] = result.description
+                    it[description] = result.description?.take(254)
                 }
                 result.actors.forEachIndexed { index, dto ->
                     ActorsTable.upsert {
@@ -99,6 +106,7 @@ class MovieService(private val tmdbClient :TmdbApi) {
                         it[name] = dto.name
                         it[gender] = dto.gender
                         it[birthyear] = dto.birthyear?.toUInt()
+                        it[specialty] = dto.specialty?.take(254)
                     }
                     MovieActorsTable.upsert {
                         it[MovieActorsTable.movieId] = result.id
@@ -153,6 +161,19 @@ class MovieService(private val tmdbClient :TmdbApi) {
         return candidate
     }
 
+    fun savePreferences(preferences: PreferencesDto): PreferencesDto = transaction {
+        val toSave = preferences.movies.map { getFullMovie(it.id) }
+        UserMoviesTable.deleteWhere { this.userId eq userId }
+        toSave.forEachIndexed { movieIndex, movie ->
+            UserMoviesTable.insert {
+                it[this.userId] = preferences.userId.toString()
+                it[movieId] = movie.id
+                it[orderIndex] = movieIndex
+            }
+        }
+        preferences
+    }
+
     private fun toDto(movie :Movie) = MovieDto(
         movie.id, movie.title,
         if (movie.posterPath.isNullOrBlank()) null else Url("https://image.tmdb.org/t/p/w300" + movie.posterPath),
@@ -160,7 +181,8 @@ class MovieService(private val tmdbClient :TmdbApi) {
         releaseDate = if (!movie.releaseDate.isNullOrBlank()) Instant.parse(movie.releaseDate + "T00:00:00Z") else null
     )
 
-    internal fun toDto(cast :Cast) :ActorDto = ActorDto(cast.id, cast.name, toGender(cast.gender))
+    internal fun toDto(cast :Cast) :ActorDto = ActorDto(cast.id, cast.name, toGender(cast.gender),
+        specialty= cast.character.take(254))
 
     typealias TmdbGender = uk.co.conoregan.themoviedbapi.model.people.Gender
 

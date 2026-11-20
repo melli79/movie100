@@ -29,3 +29,10 @@ dependencies {
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }
+
+tasks.named<Copy>("processResources") {
+    dependsOn(":app:webApp:wasmJsBrowserDistribution")
+    from(project(":app:webApp").layout.buildDirectory.dir("dist/wasmJs/productionExecutable")) {
+        into("static")
+    }
+}

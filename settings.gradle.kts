@@ -41,5 +41,5 @@ include(":app:desktopApp")
 include(":app:shared")
 include(":app:webApp")
 include(":core")
-//include(":server")
+//include(":server") // replace with this if you prefer the smaller ktor server
 include(":springserver")

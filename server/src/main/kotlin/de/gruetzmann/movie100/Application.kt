@@ -1,6 +1,7 @@
 package de.gruetzmann.movie100
 
 import de.gruetzmann.movie100.db.DatabaseFactory
+import de.gruetzmann.movie100.db.UsersTable
 import de.gruetzmann.movie100.model.ErrorDto
 import de.gruetzmann.movie100.model.PreferencesDto
 import io.ktor.server.application.*
@@ -8,15 +9,19 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.http.content.*
 import uk.co.conoregan.themoviedbapi.TmdbApi
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.request.receive
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import ulid.ULID
 import kotlin.random.Random
 import kotlin.system.exitProcess
@@ -100,15 +105,32 @@ fun Application.module() {
             call.respond(HttpStatusCode.Accepted, preferences)
         }
 
-        put("/preferences/{userId}") {
-            try {
+        put("/preferences/{login}") {
+            if (movieService!=null) try {
+                val login = call.pathParameters.get("login")
+                if (login.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorDto("missing login path attribute"))
+                    return@put
+                }
+                val user = userService.findUser(login)
+                if (user==null) {
+                    call.respond(HttpStatusCode.NotFound, ErrorDto("User not found. Did you login?"))
+                    return@put
+                }
+                val userId = user.id
+                println("User id: $userId")
                 val preferences = call.receive<PreferencesDto>()
-                val saved = userService.savePreferences(preferences)
+                if (preferences.userId!=userId) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorDto("User does not match its login"))
+                    return@put
+                }
+                val saved = movieService.savePreferences(preferences)
                 call.respond(HttpStatusCode.OK, saved)
             } catch (e :Exception) {
                 e.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest, ErrorDto("Invalid or missing JSON payload: ${e.message}"))
-            }
+            } else
+                call.respond(HttpStatusCode.FailedDependency, ErrorDto("API key not set!"))
         }
 
         delete("/user/{user}") {
@@ -120,6 +142,12 @@ fun Application.module() {
                 return@delete call.respond(HttpStatusCode.Accepted, "User '$login' deleted.")
             else
                 return@delete call.respond(HttpStatusCode.NotFound, ErrorDto("User '$login' not found."))
+        }
+
+        singlePageApplication {
+            useResources = true
+            filesPath = "static"
+            defaultPage = "index.html"
         }
     }
 }
